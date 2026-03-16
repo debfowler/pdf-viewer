@@ -125,6 +125,25 @@
     }
     .tab.active .tab-num { color: var(--accent); opacity: .6; }
 
+    .tab-close {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-left: 6px;
+      width: 14px;
+      height: 14px;
+      border-radius: 2px;
+      font-size: 11px;
+      line-height: 1;
+      color: var(--muted);
+      opacity: 0;
+      transition: opacity .15s, background .15s, color .15s;
+      vertical-align: middle;
+      flex-shrink: 0;
+    }
+    .tab:hover .tab-close { opacity: 1; }
+    .tab-close:hover { background: var(--danger); color: #fff; opacity: 1; }
+
     /* ── DROP ZONE ── */
     #drop-zone {
       flex: 1;
@@ -313,10 +332,29 @@
       const tab = document.createElement('div');
       tab.className = 'tab' + (i === current ? ' active' : '');
       tab.title = f.name;
-      tab.innerHTML = `<span class="tab-num">${i + 1}</span>${f.name}`;
+      tab.innerHTML = `<span class="tab-num">${i + 1}</span>${f.name}<span class="tab-close" title="Close">✕</span>`;
       tab.onclick = () => showViewer(i);
+      tab.querySelector('.tab-close').onclick = e => { e.stopPropagation(); closeTab(i); };
       tabStrip.appendChild(tab);
     });
+  }
+
+  /* ── CLOSE A TAB ── */
+  function closeTab(index) {
+    URL.revokeObjectURL(objectURLs[index]);
+    files.splice(index, 1);
+    objectURLs.splice(index, 1);
+
+    if (files.length === 0) { clearAll(); return; }
+
+    // If we closed a tab before current, shift current back
+    if (index < current) current--;
+    // Stay within bounds
+    current = Math.min(current, files.length - 1);
+
+    buildTabs();
+    showViewer(current);
+    countNum.textContent = files.length;
   }
 
   /* ── SHOW A PDF ── */
