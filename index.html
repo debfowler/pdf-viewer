@@ -119,23 +119,31 @@
       min-width: 0;
     }
 
-    .tab-close {
-      flex-shrink: 0;
-      width: 16px;
-      height: 16px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 3px;
-      font-size: 11px;
-      color: var(--muted);
-      opacity: 0;
-      transition: opacity .15s, background .15s, color .15s;
-    }
-    .tab:hover .tab-close { opacity: 1; }
-    .tab-close:hover { background: var(--danger); color: #fff; }
+.tab-close {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  background: #444;
+  border: 1px solid var(--border);
+  opacity: .9;
+  margin-left: 6px;
+  cursor: pointer;
+  transition: background .15s, transform .1s;
+}
 
-    /* DROP ZONE */
+.tab-close:hover {
+  background: var(--danger);
+  transform: scale(1.1);
+}
+
+/* DROP ZONE */
     #drop-zone {
       flex: 1;
       display: flex;
@@ -211,7 +219,7 @@
     <path d="M46 40v12M40 46h12" stroke="#e8c547" stroke-width="2" stroke-linecap="round"/>
   </svg>
   <p><strong>Drop PDFs here</strong> or click to browse<br/>Select as many as you need</p>
-  <small>arrow keys ← → to navigate &nbsp;·&nbsp; hover a tab to close it &nbsp;·&nbsp; files stay local</small>
+<small>arrow keys ← → to navigate &nbsp;·&nbsp; click the X to close tabs &nbsp;·&nbsp; files stay local</small>
 </div>
 
 <div id="viewer">
@@ -263,17 +271,40 @@
   });
 
   /* LOAD FILES — appends, never re-creates existing URLs */
-  function loadFiles(newFiles) {
-    const prevCount = files.length;
-    files      = [...files, ...newFiles];
-    objectURLs = [...objectURLs, ...newFiles.map(f => URL.createObjectURL(f))];
-    buildTabs();
-    showViewer(prevCount === 0 ? 0 : current);
-    countNum.textContent = files.length;
-    counter.style.display = '';
-    btnClear.style.display = '';
-  }
+function loadFiles(newFiles) {
 
+  // remove non-PDF files just in case
+  const pdfFiles = newFiles.filter(f => f.type === 'application/pdf');
+
+  // create a quick lookup of files already loaded
+  const existing = new Set(
+    files.map(f => `${f.name}|${f.size}|${f.lastModified}`)
+  );
+
+  // keep only files that aren't already open
+  const uniqueFiles = pdfFiles.filter(f => {
+    const key = `${f.name}|${f.size}|${f.lastModified}`;
+    if (existing.has(key)) return false;
+    existing.add(key);
+    return true;
+  });
+
+  if (!uniqueFiles.length) return;
+
+  const prevCount = files.length;
+
+  files = [...files, ...uniqueFiles];
+  objectURLs = [...objectURLs, ...uniqueFiles.map(f => URL.createObjectURL(f))];
+
+  buildTabs();
+
+  // jump to the first newly added file
+  showViewer(prevCount);
+
+  countNum.textContent = files.length;
+  counter.style.display = '';
+  btnClear.style.display = '';
+}
   /* BUILD TABS */
   function buildTabs() {
     tabStrip.innerHTML = '';
@@ -337,16 +368,19 @@
   }
 
   /* CLEAR ALL */
-  function clearAll() {
-    objectURLs.forEach(u => URL.revokeObjectURL(u));
-    objectURLs = []; files = []; current = 0;
-    tabStrip.innerHTML = '';
-    pdfFrame.src = '';
-    viewer.classList.remove('active');
-    dropZone.style.display = '';
-    counter.style.display = 'none';
-    btnClear.style.display = 'none';
-  }
+function clearAll() {
+  objectURLs.forEach(u => URL.revokeObjectURL(u));
+  objectURLs = [];
+  files = [];
+  current = 0;
+  tabStrip.innerHTML = '';
+  pdfFrame.src = '';
+  filenameDiv.innerHTML = '—';
+  viewer.classList.remove('active');
+  dropZone.style.display = '';
+  counter.style.display = 'none';
+  btnClear.style.display = 'none';
+}
 
   /* KEYBOARD */
   document.addEventListener('keydown', e => {
