@@ -10,14 +10,13 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:        #0f0f0f;
-      --surface:   #1a1a1a;
-      --border:    #2e2e2e;
-      --accent:    #e8c547;
-      --accent2:   #4a9eff;
-      --text:      #e8e8e0;
-      --muted:     #666;
-      --danger:    #e05252;
+      --bg:      #0f0f0f;
+      --surface: #1a1a1a;
+      --border:  #2e2e2e;
+      --accent:  #e8c547;
+      --text:    #e8e8e0;
+      --muted:   #666;
+      --danger:  #e05252;
     }
 
     body {
@@ -30,7 +29,7 @@
       overflow: hidden;
     }
 
-    /* ── TOP BAR ── */
+    /* TOP BAR */
     #topbar {
       display: flex;
       align-items: center;
@@ -41,7 +40,6 @@
       flex-shrink: 0;
       flex-wrap: wrap;
     }
-
     #topbar h1 {
       font-family: 'IBM Plex Mono', monospace;
       font-size: 13px;
@@ -50,9 +48,7 @@
       text-transform: uppercase;
       white-space: nowrap;
     }
-
     #file-input { display: none; }
-
     .btn {
       font-family: 'IBM Plex Mono', monospace;
       font-size: 12px;
@@ -69,9 +65,7 @@
     .btn:hover { border-color: var(--accent); color: var(--accent); }
     .btn.primary { background: var(--accent); color: #0f0f0f; border-color: var(--accent); font-weight: 600; }
     .btn.primary:hover { background: #f5d45e; }
-    .btn:disabled { opacity: .3; cursor: default; }
-    .btn:disabled:hover { border-color: var(--border); color: var(--text); }
-
+    .btn:disabled { opacity: .3; cursor: default; pointer-events: none; }
     #counter {
       font-family: 'IBM Plex Mono', monospace;
       font-size: 12px;
@@ -81,7 +75,7 @@
     }
     #counter span { color: var(--accent); }
 
-    /* ── TAB STRIP ── */
+    /* TAB STRIP */
     #tab-strip {
       display: flex;
       overflow-x: auto;
@@ -92,59 +86,56 @@
       scrollbar-color: var(--border) transparent;
     }
     #tab-strip::-webkit-scrollbar { height: 4px; }
-    #tab-strip::-webkit-scrollbar-track { background: transparent; }
     #tab-strip::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
+    /* FIX 1: flex layout on tab so close button is never clipped */
     .tab {
       font-family: 'IBM Plex Mono', monospace;
       font-size: 11px;
-      padding: 8px 14px;
+      padding: 0 8px 0 12px;
+      height: 34px;
       border-right: 1px solid var(--border);
-      white-space: nowrap;
       cursor: pointer;
       color: var(--muted);
-      max-width: 160px;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      width: 180px;
       flex-shrink: 0;
       transition: background .1s, color .1s;
-      position: relative;
       user-select: none;
+      display: flex;
+      align-items: center;
+      gap: 4px;
     }
     .tab:hover { background: rgba(255,255,255,.04); color: var(--text); }
-    .tab.active {
-      color: var(--accent);
-      background: var(--bg);
-      border-bottom: 2px solid var(--accent);
-    }
-    .tab .tab-num {
-      display: inline-block;
-      color: var(--muted);
-      margin-right: 4px;
-      font-size: 10px;
-    }
+    .tab.active { color: var(--accent); background: var(--bg); border-bottom: 2px solid var(--accent); }
+
+    .tab-num { font-size: 10px; color: var(--muted); flex-shrink: 0; }
     .tab.active .tab-num { color: var(--accent); opacity: .6; }
 
+    .tab-label {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      min-width: 0;
+    }
+
     .tab-close {
-      display: inline-flex;
+      flex-shrink: 0;
+      width: 16px;
+      height: 16px;
+      display: flex;
       align-items: center;
       justify-content: center;
-      margin-left: 6px;
-      width: 14px;
-      height: 14px;
-      border-radius: 2px;
+      border-radius: 3px;
       font-size: 11px;
-      line-height: 1;
       color: var(--muted);
       opacity: 0;
       transition: opacity .15s, background .15s, color .15s;
-      vertical-align: middle;
-      flex-shrink: 0;
     }
     .tab:hover .tab-close { opacity: 1; }
-    .tab-close:hover { background: var(--danger); color: #fff; opacity: 1; }
+    .tab-close:hover { background: var(--danger); color: #fff; }
 
-    /* ── DROP ZONE ── */
+    /* DROP ZONE */
     #drop-zone {
       flex: 1;
       display: flex;
@@ -160,32 +151,18 @@
       text-align: center;
       padding: 40px;
     }
-    #drop-zone.drag-over {
-      border-color: var(--accent);
-      background: rgba(232,197,71,.04);
-    }
+    #drop-zone.drag-over { border-color: var(--accent); background: rgba(232,197,71,.04); }
     #drop-zone svg { opacity: .3; }
     #drop-zone p { color: var(--muted); font-size: 14px; line-height: 1.6; }
     #drop-zone p strong { color: var(--text); }
     #drop-zone small { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--muted); }
 
-    /* ── VIEWER ── */
-    #viewer {
-      display: none;
-      flex: 1;
-      flex-direction: column;
-      overflow: hidden;
-    }
+    /* VIEWER */
+    #viewer { display: none; flex: 1; flex-direction: column; overflow: hidden; }
     #viewer.active { display: flex; }
+    #pdf-frame { flex: 1; width: 100%; border: none; background: #525659; }
 
-    #pdf-frame {
-      flex: 1;
-      width: 100%;
-      border: none;
-      background: #525659;
-    }
-
-    /* ── BOTTOM NAV ── */
+    /* BOTTOM NAV */
     #bottom-nav {
       display: flex;
       align-items: center;
@@ -196,7 +173,6 @@
       border-top: 1px solid var(--border);
       flex-shrink: 0;
     }
-
     #filename-display {
       font-family: 'IBM Plex Mono', monospace;
       font-size: 11px;
@@ -209,40 +185,22 @@
       text-align: center;
     }
     #filename-display span { color: var(--text); }
-
-    #key-hint {
-      font-family: 'IBM Plex Mono', monospace;
-      font-size: 10px;
-      color: var(--muted);
-      opacity: .5;
-      white-space: nowrap;
-    }
-    kbd {
-      display: inline-block;
-      border: 1px solid var(--border);
-      padding: 1px 5px;
-      border-radius: 2px;
-      font-family: 'IBM Plex Mono', monospace;
-    }
+    #key-hint { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--muted); opacity: .5; white-space: nowrap; }
+    kbd { display: inline-block; border: 1px solid var(--border); padding: 1px 5px; border-radius: 2px; font-family: 'IBM Plex Mono', monospace; }
   </style>
 </head>
 <body>
 
-<!-- TOP BAR -->
 <div id="topbar">
   <h1>⬛ PDF Viewer</h1>
   <button class="btn primary" onclick="document.getElementById('file-input').click()">+ Open PDFs</button>
   <input type="file" id="file-input" multiple accept=".pdf" />
-  <button class="btn" id="btn-clear" onclick="clearAll()" style="display:none">✕ Clear</button>
-  <div id="counter" style="display:none">
-    <span id="count-num">0</span> files loaded
-  </div>
+  <button class="btn" id="btn-clear" onclick="clearAll()" style="display:none">✕ Clear All</button>
+  <div id="counter" style="display:none"><span id="count-num">0</span> files</div>
 </div>
 
-<!-- TAB STRIP -->
 <div id="tab-strip"></div>
 
-<!-- DROP ZONE -->
 <div id="drop-zone" onclick="document.getElementById('file-input').click()">
   <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
     <rect x="8" y="4" width="36" height="48" rx="3" stroke="#e8e8e0" stroke-width="2"/>
@@ -253,24 +211,23 @@
     <path d="M46 40v12M40 46h12" stroke="#e8c547" stroke-width="2" stroke-linecap="round"/>
   </svg>
   <p><strong>Drop PDFs here</strong> or click to browse<br/>Select as many as you need</p>
-  <small>arrow keys ← → to navigate • all files stay local</small>
+  <small>arrow keys ← → to navigate &nbsp;·&nbsp; hover a tab to close it &nbsp;·&nbsp; files stay local</small>
 </div>
 
-<!-- VIEWER -->
 <div id="viewer">
   <iframe id="pdf-frame" title="PDF Viewer"></iframe>
   <div id="bottom-nav">
     <button class="btn" id="btn-prev" onclick="navigate(-1)">← Prev</button>
     <div id="filename-display">—</div>
     <button class="btn primary" id="btn-next" onclick="navigate(1)">Next →</button>
-    <div id="key-hint"><kbd>←</kbd><kbd>→</kbd> keys</div>
+    <div id="key-hint"><kbd>←</kbd> <kbd>→</kbd> keys</div>
   </div>
 </div>
 
 <script>
-  let files = [];
-  let current = 0;
+  let files      = [];
   let objectURLs = [];
+  let current    = 0;
 
   const fileInput   = document.getElementById('file-input');
   const dropZone    = document.getElementById('drop-zone');
@@ -284,110 +241,105 @@
   const btnNext     = document.getElementById('btn-next');
   const filenameDiv = document.getElementById('filename-display');
 
-  /* ── FILE INPUT ── */
-  fileInput.addEventListener('change', e => loadFiles([...e.target.files]));
-
-  /* ── DRAG & DROP ── */
-  ['dragenter','dragover'].forEach(ev =>
-    dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.add('drag-over'); })
-  );
-  ['dragleave','drop'].forEach(ev =>
-    dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.remove('drag-over'); })
-  );
-  dropZone.addEventListener('drop', e => {
-    const dropped = [...e.dataTransfer.files].filter(f => f.type === 'application/pdf');
-    if (dropped.length) loadFiles(dropped);
+  /* FILE INPUT */
+  fileInput.addEventListener('change', e => {
+    loadFiles([...e.target.files]);
+    fileInput.value = '';
   });
 
-  // Also allow drag-drop anywhere on the page
-  document.addEventListener('dragover', e => e.preventDefault());
+  /* FIX 2: single drag-drop handler on document only — no duplicate on dropZone */
+  document.addEventListener('dragover', e => {
+    e.preventDefault();
+    dropZone.classList.add('drag-over');
+  });
+  document.addEventListener('dragleave', e => {
+    if (!e.relatedTarget) dropZone.classList.remove('drag-over');
+  });
   document.addEventListener('drop', e => {
     e.preventDefault();
+    dropZone.classList.remove('drag-over');
     const dropped = [...e.dataTransfer.files].filter(f => f.type === 'application/pdf');
     if (dropped.length) loadFiles(dropped);
   });
 
-  /* ── LOAD FILES ── */
+  /* LOAD FILES — appends, never re-creates existing URLs */
   function loadFiles(newFiles) {
-    // Revoke old URLs if clearing
-    objectURLs.forEach(u => URL.revokeObjectURL(u));
-    objectURLs = [];
-
-    // Merge or replace — append to existing set
-    files = [...files, ...newFiles];
-    objectURLs = files.map(f => URL.createObjectURL(f));
-
+    const prevCount = files.length;
+    files      = [...files, ...newFiles];
+    objectURLs = [...objectURLs, ...newFiles.map(f => URL.createObjectURL(f))];
     buildTabs();
-    showViewer(files.length - newFiles.length === 0 ? 0 : current);
+    showViewer(prevCount === 0 ? 0 : current);
     countNum.textContent = files.length;
     counter.style.display = '';
     btnClear.style.display = '';
-    fileInput.value = '';
   }
 
-  /* ── BUILD TABS ── */
+  /* BUILD TABS */
   function buildTabs() {
     tabStrip.innerHTML = '';
     files.forEach((f, i) => {
       const tab = document.createElement('div');
       tab.className = 'tab' + (i === current ? ' active' : '');
       tab.title = f.name;
-      tab.innerHTML = `<span class="tab-num">${i + 1}</span>${f.name}<span class="tab-close" title="Close">✕</span>`;
-      tab.onclick = () => showViewer(i);
-      tab.querySelector('.tab-close').onclick = e => { e.stopPropagation(); closeTab(i); };
+
+      const num = document.createElement('span');
+      num.className = 'tab-num';
+      num.textContent = i + 1;
+
+      const label = document.createElement('span');
+      label.className = 'tab-label';
+      label.textContent = f.name;
+
+      const close = document.createElement('span');
+      close.className = 'tab-close';
+      close.title = 'Close tab';
+      close.textContent = '✕';
+      close.addEventListener('click', e => { e.stopPropagation(); closeTab(i); });
+
+      tab.appendChild(num);
+      tab.appendChild(label);
+      tab.appendChild(close);
+      tab.addEventListener('click', () => showViewer(i));
       tabStrip.appendChild(tab);
     });
   }
 
-  /* ── CLOSE A TAB ── */
+  /* CLOSE ONE TAB */
   function closeTab(index) {
     URL.revokeObjectURL(objectURLs[index]);
     files.splice(index, 1);
     objectURLs.splice(index, 1);
-
     if (files.length === 0) { clearAll(); return; }
-
-    // If we closed a tab before current, shift current back
     if (index < current) current--;
-    // Stay within bounds
     current = Math.min(current, files.length - 1);
-
     buildTabs();
     showViewer(current);
     countNum.textContent = files.length;
   }
 
-  /* ── SHOW A PDF ── */
+  /* SHOW A PDF */
   function showViewer(index) {
     current = Math.max(0, Math.min(index, files.length - 1));
     dropZone.style.display = 'none';
     viewer.classList.add('active');
-
     pdfFrame.src = objectURLs[current];
     filenameDiv.innerHTML = `<span>${files[current].name}</span> &nbsp;·&nbsp; ${current + 1} / ${files.length}`;
-
     btnPrev.disabled = current === 0;
     btnNext.disabled = current === files.length - 1;
-
-    // Update tabs
     document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', i === current));
-
-    // Scroll active tab into view
-    const activeTab = tabStrip.children[current];
-    if (activeTab) activeTab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    tabStrip.children[current]?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
   }
 
-  /* ── NAVIGATE ── */
+  /* NAVIGATE */
   function navigate(dir) {
-    if (current + dir >= 0 && current + dir < files.length) showViewer(current + dir);
+    const next = current + dir;
+    if (next >= 0 && next < files.length) showViewer(next);
   }
 
-  /* ── CLEAR ── */
+  /* CLEAR ALL */
   function clearAll() {
     objectURLs.forEach(u => URL.revokeObjectURL(u));
-    objectURLs = [];
-    files = [];
-    current = 0;
+    objectURLs = []; files = []; current = 0;
     tabStrip.innerHTML = '';
     pdfFrame.src = '';
     viewer.classList.remove('active');
@@ -396,7 +348,7 @@
     btnClear.style.display = 'none';
   }
 
-  /* ── KEYBOARD ── */
+  /* KEYBOARD */
   document.addEventListener('keydown', e => {
     if (!files.length) return;
     if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); navigate(1); }
