@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PDF Tab Viewer</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0f0f0f;
+      --surface:   #1a1a1a;
+      --border:    #2e2e2e;
+      --accent:    #e8c547;
+      --accent2:   #4a9eff;
+      --text:      #e8e8e0;
+      --muted:     #666;
+      --danger:    #e05252;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'IBM Plex Sans', sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── TOP BAR ── */
+    #topbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 16px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      flex-wrap: wrap;
+    }
+
+    #topbar h1 {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    #file-input { display: none; }
+
+    .btn {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+      padding: 7px 14px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text);
+      cursor: pointer;
+      border-radius: 3px;
+      transition: all .15s;
+      white-space: nowrap;
+      letter-spacing: 0.04em;
+    }
+    .btn:hover { border-color: var(--accent); color: var(--accent); }
+    .btn.primary { background: var(--accent); color: #0f0f0f; border-color: var(--accent); font-weight: 600; }
+    .btn.primary:hover { background: #f5d45e; }
+    .btn:disabled { opacity: .3; cursor: default; }
+    .btn:disabled:hover { border-color: var(--border); color: var(--text); }
+
+    #counter {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+      color: var(--muted);
+      white-space: nowrap;
+      margin-left: auto;
+    }
+    #counter span { color: var(--accent); }
+
+    /* ── TAB STRIP ── */
+    #tab-strip {
+      display: flex;
+      overflow-x: auto;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+    #tab-strip::-webkit-scrollbar { height: 4px; }
+    #tab-strip::-webkit-scrollbar-track { background: transparent; }
+    #tab-strip::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .tab {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      padding: 8px 14px;
+      border-right: 1px solid var(--border);
+      white-space: nowrap;
+      cursor: pointer;
+      color: var(--muted);
+      max-width: 160px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex-shrink: 0;
+      transition: background .1s, color .1s;
+      position: relative;
+      user-select: none;
+    }
+    .tab:hover { background: rgba(255,255,255,.04); color: var(--text); }
+    .tab.active {
+      color: var(--accent);
+      background: var(--bg);
+      border-bottom: 2px solid var(--accent);
+    }
+    .tab .tab-num {
+      display: inline-block;
+      color: var(--muted);
+      margin-right: 4px;
+      font-size: 10px;
+    }
+    .tab.active .tab-num { color: var(--accent); opacity: .6; }
+
+    /* ── DROP ZONE ── */
+    #drop-zone {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      border: 2px dashed var(--border);
+      margin: 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+      text-align: center;
+      padding: 40px;
+    }
+    #drop-zone.drag-over {
+      border-color: var(--accent);
+      background: rgba(232,197,71,.04);
+    }
+    #drop-zone svg { opacity: .3; }
+    #drop-zone p { color: var(--muted); font-size: 14px; line-height: 1.6; }
+    #drop-zone p strong { color: var(--text); }
+    #drop-zone small { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--muted); }
+
+    /* ── VIEWER ── */
+    #viewer {
+      display: none;
+      flex: 1;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #viewer.active { display: flex; }
+
+    #pdf-frame {
+      flex: 1;
+      width: 100%;
+      border: none;
+      background: #525659;
+    }
+
+    /* ── BOTTOM NAV ── */
+    #bottom-nav {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 10px 16px;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    #filename-display {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      max-width: 400px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+      text-align: center;
+    }
+    #filename-display span { color: var(--text); }
+
+    #key-hint {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      color: var(--muted);
+      opacity: .5;
+      white-space: nowrap;
+    }
+    kbd {
+      display: inline-block;
+      border: 1px solid var(--border);
+      padding: 1px 5px;
+      border-radius: 2px;
+      font-family: 'IBM Plex Mono', monospace;
+    }
+  </style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <h1>⬛ PDF Viewer</h1>
+  <button class="btn primary" onclick="document.getElementById('file-input').click()">+ Open PDFs</button>
+  <input type="file" id="file-input" multiple accept=".pdf" />
+  <button class="btn" id="btn-clear" onclick="clearAll()" style="display:none">✕ Clear</button>
+  <div id="counter" style="display:none">
+    <span id="count-num">0</span> files loaded
+  </div>
+</div>
+
+<!-- TAB STRIP -->
+<div id="tab-strip"></div>
+
+<!-- DROP ZONE -->
+<div id="drop-zone" onclick="document.getElementById('file-input').click()">
+  <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="8" y="4" width="36" height="48" rx="3" stroke="#e8e8e0" stroke-width="2"/>
+    <rect x="16" y="12" width="20" height="2" rx="1" fill="#e8e8e0" opacity=".4"/>
+    <rect x="16" y="18" width="20" height="2" rx="1" fill="#e8e8e0" opacity=".4"/>
+    <rect x="16" y="24" width="14" height="2" rx="1" fill="#e8e8e0" opacity=".4"/>
+    <circle cx="46" cy="46" r="14" fill="#1a1a1a" stroke="#e8c547" stroke-width="2"/>
+    <path d="M46 40v12M40 46h12" stroke="#e8c547" stroke-width="2" stroke-linecap="round"/>
+  </svg>
+  <p><strong>Drop PDFs here</strong> or click to browse<br/>Select as many as you need</p>
+  <small>arrow keys ← → to navigate • all files stay local</small>
+</div>
+
+<!-- VIEWER -->
+<div id="viewer">
+  <iframe id="pdf-frame" title="PDF Viewer"></iframe>
+  <div id="bottom-nav">
+    <button class="btn" id="btn-prev" onclick="navigate(-1)">← Prev</button>
+    <div id="filename-display">—</div>
+    <button class="btn primary" id="btn-next" onclick="navigate(1)">Next →</button>
+    <div id="key-hint"><kbd>←</kbd><kbd>→</kbd> keys</div>
+  </div>
+</div>
+
+<script>
+  let files = [];
+  let current = 0;
+  let objectURLs = [];
+
+  const fileInput   = document.getElementById('file-input');
+  const dropZone    = document.getElementById('drop-zone');
+  const viewer      = document.getElementById('viewer');
+  const pdfFrame    = document.getElementById('pdf-frame');
+  const tabStrip    = document.getElementById('tab-strip');
+  const counter     = document.getElementById('counter');
+  const countNum    = document.getElementById('count-num');
+  const btnClear    = document.getElementById('btn-clear');
+  const btnPrev     = document.getElementById('btn-prev');
+  const btnNext     = document.getElementById('btn-next');
+  const filenameDiv = document.getElementById('filename-display');
+
+  /* ── FILE INPUT ── */
+  fileInput.addEventListener('change', e => loadFiles([...e.target.files]));
+
+  /* ── DRAG & DROP ── */
+  ['dragenter','dragover'].forEach(ev =>
+    dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.add('drag-over'); })
+  );
+  ['dragleave','drop'].forEach(ev =>
+    dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.remove('drag-over'); })
+  );
+  dropZone.addEventListener('drop', e => {
+    const dropped = [...e.dataTransfer.files].filter(f => f.type === 'application/pdf');
+    if (dropped.length) loadFiles(dropped);
+  });
+
+  // Also allow drag-drop anywhere on the page
+  document.addEventListener('dragover', e => e.preventDefault());
+  document.addEventListener('drop', e => {
+    e.preventDefault();
+    const dropped = [...e.dataTransfer.files].filter(f => f.type === 'application/pdf');
+    if (dropped.length) loadFiles(dropped);
+  });
+
+  /* ── LOAD FILES ── */
+  function loadFiles(newFiles) {
+    // Revoke old URLs if clearing
+    objectURLs.forEach(u => URL.revokeObjectURL(u));
+    objectURLs = [];
+
+    // Merge or replace — append to existing set
+    files = [...files, ...newFiles];
+    objectURLs = files.map(f => URL.createObjectURL(f));
+
+    buildTabs();
+    showViewer(files.length - newFiles.length === 0 ? 0 : current);
+    countNum.textContent = files.length;
+    counter.style.display = '';
+    btnClear.style.display = '';
+    fileInput.value = '';
+  }
+
+  /* ── BUILD TABS ── */
+  function buildTabs() {
+    tabStrip.innerHTML = '';
+    files.forEach((f, i) => {
+      const tab = document.createElement('div');
+      tab.className = 'tab' + (i === current ? ' active' : '');
+      tab.title = f.name;
+      tab.innerHTML = `<span class="tab-num">${i + 1}</span>${f.name}`;
+      tab.onclick = () => showViewer(i);
+      tabStrip.appendChild(tab);
+    });
+  }
+
+  /* ── SHOW A PDF ── */
+  function showViewer(index) {
+    current = Math.max(0, Math.min(index, files.length - 1));
+    dropZone.style.display = 'none';
+    viewer.classList.add('active');
+
+    pdfFrame.src = objectURLs[current];
+    filenameDiv.innerHTML = `<span>${files[current].name}</span> &nbsp;·&nbsp; ${current + 1} / ${files.length}`;
+
+    btnPrev.disabled = current === 0;
+    btnNext.disabled = current === files.length - 1;
+
+    // Update tabs
+    document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', i === current));
+
+    // Scroll active tab into view
+    const activeTab = tabStrip.children[current];
+    if (activeTab) activeTab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  }
+
+  /* ── NAVIGATE ── */
+  function navigate(dir) {
+    if (current + dir >= 0 && current + dir < files.length) showViewer(current + dir);
+  }
+
+  /* ── CLEAR ── */
+  function clearAll() {
+    objectURLs.forEach(u => URL.revokeObjectURL(u));
+    objectURLs = [];
+    files = [];
+    current = 0;
+    tabStrip.innerHTML = '';
+    pdfFrame.src = '';
+    viewer.classList.remove('active');
+    dropZone.style.display = '';
+    counter.style.display = 'none';
+    btnClear.style.display = 'none';
+  }
+
+  /* ── KEYBOARD ── */
+  document.addEventListener('keydown', e => {
+    if (!files.length) return;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); navigate(1); }
+    if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   { e.preventDefault(); navigate(-1); }
+    if (e.key === 'Home') showViewer(0);
+    if (e.key === 'End')  showViewer(files.length - 1);
+  });
+</script>
+</body>
+</html>
