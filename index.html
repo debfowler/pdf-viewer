@@ -7,7 +7,11 @@
   <style>
     @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap');
 
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
     :root {
       --bg:      #0f0f0f;
@@ -50,7 +54,9 @@
       white-space: nowrap;
     }
 
-    #file-input { display: none; }
+    #file-input {
+      display: none;
+    }
 
     .btn {
       font-family: 'IBM Plex Mono', monospace;
@@ -110,6 +116,7 @@
       flex-shrink: 0;
       scrollbar-width: thin;
       scrollbar-color: var(--border) transparent;
+      min-height: 34px;
     }
 
     #tab-strip::-webkit-scrollbar {
@@ -119,6 +126,12 @@
     #tab-strip::-webkit-scrollbar-thumb {
       background: var(--border);
       border-radius: 2px;
+    }
+
+    #tab-strip.drag-over {
+      background: rgba(232,197,71,.08);
+      outline: 2px dashed var(--accent);
+      outline-offset: -2px;
     }
 
     .tab {
@@ -253,44 +266,6 @@
       background: #525659;
     }
 
-    #pdf-frame {
-  flex: 1;
-  width: 100%;
-  border: none;
-  background: #525659;
-}
-
-/* Prevent iframe from stealing drag/drop */
-#viewer.dragging #pdf-frame {
-  pointer-events: none;
-}
-    /* DROP OVERLAY */
-    #drop-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(15, 15, 15, 0.55);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 9999;
-    }
-
-    #drop-overlay.active {
-      display: flex;
-    }
-
-    .drop-overlay-box {
-      border: 2px dashed var(--accent);
-      background: var(--surface);
-      color: var(--text);
-      padding: 28px 40px;
-      border-radius: 8px;
-      font-family: 'IBM Plex Mono', monospace;
-      font-size: 16px;
-      letter-spacing: 0.04em;
-      box-shadow: 0 10px 30px rgba(0,0,0,.35);
-    }
-
     /* BOTTOM NAV */
     #bottom-nav {
       display: flex;
@@ -358,7 +333,7 @@
       <path d="M46 40v12M40 46h12" stroke="#e8c547" stroke-width="2" stroke-linecap="round"/>
     </svg>
     <p><strong>Drop PDFs here</strong> or click to browse<br/>Select as many as you need</p>
-    <small>arrow keys ← → to navigate &nbsp;·&nbsp; click the X to close tabs &nbsp;·&nbsp; files stay local</small>
+    <small>drag PDFs onto the tab bar to add more &nbsp;·&nbsp; click the X to close tabs &nbsp;·&nbsp; files stay local</small>
   </div>
 
   <div id="viewer">
@@ -371,15 +346,10 @@
     </div>
   </div>
 
-  <div id="drop-overlay">
-    <div class="drop-overlay-box">Drop PDFs to add them</div>
-  </div>
-
   <script>
     let files = [];
     let objectURLs = [];
     let current = 0;
-    let dragCounter = 0;
 
     const fileInput = document.getElementById('file-input');
     const dropZone = document.getElementById('drop-zone');
@@ -392,7 +362,6 @@
     const btnPrev = document.getElementById('btn-prev');
     const btnNext = document.getElementById('btn-next');
     const filenameDiv = document.getElementById('filename-display');
-    const dropOverlay = document.getElementById('drop-overlay');
 
     /* FILE INPUT */
     fileInput.addEventListener('change', e => {
@@ -400,53 +369,99 @@
       fileInput.value = '';
     });
 
-/* DRAG + DROP OVERLAY */
-let dragCounter = 0;
+    /* DRAG + DROP */
+    document.addEventListener('dragover', e => {
+      e.preventDefault();
 
-document.addEventListener('dragenter', e => {
-  e.preventDefault();
-  dragCounter++;
+      if (!e.dataTransfer || ![...e.dataTransfer.types].includes('Files')) return;
 
-  if (files.length) {
-    viewer.classList.add('dragging');
-    dropOverlay.classList.add('active');
-  } else {
-    dropZone.classList.add('drag-over');
-  }
-});
+      if (files.length) {
+        tabStrip.classList.add('drag-over');
+      } else {
+        dropZone.classList.add('drag-over');
+      }
+    });
 
-document.addEventListener('dragover', e => {
-  e.preventDefault();
+    document.addEventListener('dragleave', e => {
+      if (!e.relatedTarget) {
+        tabStrip.classList.remove('drag-over');
+        dropZone.classList.remove('drag-over');
+      }
+    });
 
-  if (files.length) {
-    viewer.classList.add('dragging');
-    dropOverlay.classList.add('active');
-  }
-});
+    document.addEventListener('drop', e => {
+      e.preventDefault();
 
-document.addEventListener('dragleave', e => {
-  e.preventDefault();
-  dragCounter--;
+      tabStrip.classList.remove('drag-over');
+      dropZone.classList.remove('drag-over');
 
-  if (dragCounter <= 0) {
-    dragCounter = 0;
-    viewer.classList.remove('dragging');
-    dropOverlay.classList.remove('active');
-    dropZone.classList.remove('drag-over');
-  }
-});
+      const dropped = [...e.dataTransfer.files].filter(f => f.type === 'application/pdf');
+      if (dropped.length) loadFiles(dropped);
+    });
 
-document.addEventListener('drop', e => {
-  e.preventDefault();
-  dragCounter = 0;
+    /* LOAD FILES */
+    function loadFiles(newFiles) {
+      const pdfFiles = newFiles.filter(f => f.type === 'application/pdf');
 
-  viewer.classList.remove('dragging');
-  dropOverlay.classList.remove('active');
-  dropZone.classList.remove('drag-over');
+      const existing = new Set(
+        files.map(f => `${f.name}|${f.size}|${f.lastModified}`)
+      );
 
-  const dropped = [...e.dataTransfer.files].filter(f => f.type === 'application/pdf');
-  if (dropped.length) loadFiles(dropped);
-});
+      const uniqueFiles = pdfFiles.filter(f => {
+        const key = `${f.name}|${f.size}|${f.lastModified}`;
+        if (existing.has(key)) return false;
+        existing.add(key);
+        return true;
+      });
+
+      if (!uniqueFiles.length) return;
+
+      const prevCount = files.length;
+
+      files = [...files, ...uniqueFiles];
+      objectURLs = [...objectURLs, ...uniqueFiles.map(f => URL.createObjectURL(f))];
+
+      buildTabs();
+      showViewer(prevCount);
+
+      countNum.textContent = files.length;
+      counter.style.display = '';
+      btnClear.style.display = '';
+    }
+
+    /* BUILD TABS */
+    function buildTabs() {
+      tabStrip.innerHTML = '';
+
+      files.forEach((f, i) => {
+        const tab = document.createElement('div');
+        tab.className = 'tab' + (i === current ? ' active' : '');
+        tab.title = f.name;
+
+        const num = document.createElement('span');
+        num.className = 'tab-num';
+        num.textContent = i + 1;
+
+        const label = document.createElement('span');
+        label.className = 'tab-label';
+        label.textContent = f.name;
+
+        const close = document.createElement('span');
+        close.className = 'tab-close';
+        close.title = 'Close tab';
+        close.textContent = '✕';
+        close.addEventListener('click', e => {
+          e.stopPropagation();
+          closeTab(i);
+        });
+
+        tab.appendChild(num);
+        tab.appendChild(label);
+        tab.appendChild(close);
+        tab.addEventListener('click', () => showViewer(i));
+        tabStrip.appendChild(tab);
+      });
+    }
 
     /* CLOSE ONE TAB */
     function closeTab(index) {
@@ -500,16 +515,15 @@ document.addEventListener('drop', e => {
       objectURLs = [];
       files = [];
       current = 0;
-      dragCounter = 0;
 
       tabStrip.innerHTML = '';
+      tabStrip.classList.remove('drag-over');
       pdfFrame.src = '';
       filenameDiv.innerHTML = '—';
 
       viewer.classList.remove('active');
       dropZone.style.display = '';
       dropZone.classList.remove('drag-over');
-      dropOverlay.classList.remove('active');
 
       counter.style.display = 'none';
       btnClear.style.display = 'none';
