@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Viewer</title>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;1,400&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <style>
     :root {
       --bg:        #0f0f0f;
@@ -662,6 +663,7 @@ function renderThumbs() {
   files.forEach((entry, i) => {
     const t = document.createElement('div');
     t.className = 'thumb' + (i === active ? ' active' : '');
+    t.dataset.idx = i;
     t.title = entry.name;
 
     if (entry.type === 'image') {
@@ -671,10 +673,11 @@ function renderThumbs() {
       img.alt = entry.name;
       t.appendChild(img);
     } else {
-      const icon = document.createElement('div');
-      icon.className = 'thumb-pdf';
-      icon.textContent = '⬡';
-      t.appendChild(icon);
+      const canvas = document.createElement('canvas');
+      canvas.className = 'thumb-img';
+      canvas.style.background = '#222';
+      t.appendChild(canvas);
+      renderPdfThumb(entry, canvas);
     }
 
     const lbl = document.createElement('div');
@@ -685,6 +688,26 @@ function renderThumbs() {
     t.addEventListener('click', () => go(i));
     thumbStrip.appendChild(t);
   });
+}
+
+async function renderPdfThumb(entry, canvas) {
+  if (!window.pdfjsLib) return;
+  try {
+    const pdf  = await pdfjsLib.getDocument(entry.url).promise;
+    const page = await pdf.getPage(1);
+    const THUMB_W = 72;
+    const vp0   = page.getViewport({ scale: 1 });
+    const scale = THUMB_W / vp0.width;
+    const vp    = page.getViewport({ scale });
+    canvas.width  = Math.round(vp.width);
+    canvas.height = Math.round(vp.height);
+    canvas.style.width  = '72px';
+    canvas.style.height = '72px';
+    canvas.style.objectFit = 'cover';
+    await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
+  } catch (e) {
+    // silently keep dark placeholder
+  }
 }
 
 function scrollThumbIntoView(idx) {
@@ -825,6 +848,10 @@ document.addEventListener('keydown', e => {
 /* ══════════════════════════════════════════
    INIT
 ══════════════════════════════════════════ */
+if (window.pdfjsLib) {
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
 showEmpty();
 </script>
 </body>
