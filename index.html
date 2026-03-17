@@ -180,6 +180,20 @@
     }
     body.drag-active #drop-glyph { color: var(--accent-dk); }
 
+    body.drag-active #viewer-wrap::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border: 2px solid var(--accent);
+      border-radius: 2px;
+      background: rgba(232, 197, 71, 0.05);
+      pointer-events: none;
+      z-index: 9998;
+    }
+    body.drag-active #tab-bar {
+      border-bottom-color: var(--accent);
+    }
+
     #drop-text {
       font-family: var(--mono);
       font-size: 12px;
